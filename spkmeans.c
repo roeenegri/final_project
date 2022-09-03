@@ -116,11 +116,17 @@ int main(int argc, char* argv[]){
     else if(!strcmp(goal, "jacobi")){
          create_adjacency_matrix(adjacency_matrix, data_list, dimension, n);
          create_L_norm_matrix(identity_matrix, ddg_matrix, lnorm_matrix, adjacency_matrix, n);
-         jacobi_algorithm(return_matrix, lnorm_matrix, eigen_values, n);
+         jacobi_algorithm(return_matrix, data_list, eigen_values, n);
     }
     else{
         return_matrix = NULL;
         exit(terminate_invalid_input());
+    }
+    if (strcmp(goal, "jacobi") == 0) {
+        for (i = 0; i < n; i++) {
+            printf("%.4f, ", eigen_values[i]);
+        }
+        printf("\n");
     }
     print_square_matrix(return_matrix, n);
     memory_free(return_matrix, n);
@@ -500,7 +506,7 @@ void print_square_matrix (double** matrix, int row_col_size) {
             }
             
             else {
-                printf("%.4f\t", matrix[i][j]);
+                printf("%.4f,", matrix[i][j]);
                 fflush( stdout );
             }
             
@@ -542,9 +548,11 @@ void matrix_subtraction (double **result_matrix, double** matrix_1, double** mat
 
 void jacobi_algorithm(double **result_matrix, double **matrix_A, double *eigen_values, int dimension){
     double **matrix_P;
+    double **transpose_matrix_P;
     double **matrix_V;
     double **copy_matrix_V;
     double **matrix_A_tag;
+    double **matrix_A_tag_copy;
     int i;
     int j;
     int iteration;
@@ -563,6 +571,18 @@ void jacobi_algorithm(double **result_matrix, double **matrix_A, double *eigen_v
     for (i = 0; i < dimension; i++) {
         matrix_P[i] = (double *) calloc (dimension, sizeof(double));
            if(!matrix_P[i]){
+        exit(terminate_with_error());
+    }
+    }
+
+    /* place for transpose_matrix_P */
+    transpose_matrix_P = (double **) calloc (dimension, sizeof(double *));
+    if(!transpose_matrix_P){
+        exit(terminate_with_error());
+    }
+    for (i = 0; i < dimension; i++) {
+        transpose_matrix_P[i] = (double *) calloc (dimension, sizeof(double));
+           if(!transpose_matrix_P[i]){
         exit(terminate_with_error());
     }
     }
@@ -603,9 +623,20 @@ void jacobi_algorithm(double **result_matrix, double **matrix_A, double *eigen_v
             exit(terminate_with_error());
         }
     }
+    /* place for matrix_A_tag_copy */
+    matrix_A_tag_copy = (double **) calloc (dimension, sizeof(double *));
+    if(!matrix_A_tag_copy){
+        exit(terminate_with_error());
+    }
+    for (i = 0; i < dimension; i++) {
+        matrix_A_tag_copy[i] = (double *) calloc (dimension, sizeof(double));
+        if(!matrix_A_tag_copy[i]){
+            exit(terminate_with_error());
+        }
+    }
 
-    copy_matrix(matrix_A, matrix_A_tag, dimension);
     /* end of set up */
+    print_square_matrix(matrix_A, dimension);
 
     /*the algorithm */
     iteration = 0;
@@ -616,16 +647,20 @@ void jacobi_algorithm(double **result_matrix, double **matrix_A, double *eigen_v
         t = calc_t(i_max, j_max, matrix_A);
         c = calc_c(t);
         s = calc_s(t, c);
+        printf(" i = %d j = %d t = %f c = %f s = %f\n", i_max, j_max, t, c, s);
         produce_matrix_p(matrix_P, dimension, i_max, j_max, c, s);
-        print_square_matrix(matrix_P, dimension);
-        produce_matrix_A(matrix_A, matrix_A_tag, c, s, dimension, i_max, j_max);
+        transpose_matrix(transpose_matrix_P, matrix_P, dimension);
+        matrix_multiplication_same_dimensions(matrix_A_tag, transpose_matrix_P, matrix_A, dimension);
+        copy_matrix(matrix_A_tag, matrix_A_tag_copy, dimension);
+        matrix_multiplication_same_dimensions(matrix_A_tag, matrix_A_tag_copy, matrix_P, dimension);
         copy_matrix(matrix_V, copy_matrix_V, dimension);
         matrix_multiplication_same_dimensions(matrix_V, copy_matrix_V, matrix_P, dimension);
         iteration += 1;
         if((is_diag(matrix_A, matrix_A_tag, dimension) == 1)){
             break;
         }
-        copy_matrix(matrix_A, matrix_A_tag, dimension);
+        copy_matrix(matrix_A_tag, matrix_A, dimension);
+        iteration++;
     }
     for(i = 0; i < dimension; i++){
         for(j = 0; j < dimension; j++){
@@ -673,7 +708,7 @@ double off(double **matrix, int dimension){
     for (i = 0; i < dimension; i++){
         for (j = 0; j < dimension; j++) {
             if (i!=j) {
-                sum += ((matrix[i][j])*(matrix[i][j]));
+                sum += pow(matrix[i][j], 2);
             }
         }
     }
@@ -687,7 +722,7 @@ int is_diag(double **matrix_A, double **matrix_old, int dimension){
     EPSILON = pow(10,-5);
     off_A = off(matrix_A, dimension);
     off_old = off(matrix_old, dimension); 
-    return ((off_old - off_A) <= EPSILON);
+    return (fabs((off_A - off_old)) <= EPSILON);
 }
 
 void copy_matrix (double **from, double **to, int dimention) {
@@ -707,7 +742,7 @@ int* calc_Aij(double **matrix_A, int dimention){
     int i_max;
     int *ret;
     double max_val;
-    max_val = 0;
+    max_val = -1;
     for (i = 0; i < dimention; i++){
         for (j=i + 1; j < dimention; j++) {
             if (fabs(matrix_A[i][j]) > max_val) {
@@ -811,5 +846,14 @@ void calc_eigen_values(double ** matrix_A_tag, double *eigen_values, int dimensi
     int i;
     for(i = 0; i < dimension; i++){
         eigen_values[i] = matrix_A_tag[i][i];
+    }
+}
+
+void transpose_matrix(double **result_matrix, double **matrix, int n){
+    int i,j;
+    for(i=0; i < n; i++){
+        for(j=0; j < n; j++){
+            result_matrix[i][j] = matrix[j][i];
+        }
     }
 }

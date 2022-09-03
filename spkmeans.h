@@ -46,5 +46,6 @@ void jacobi_algorithm(double **result_matrix, double **matrix_A, double * eigen_
 void memory_free(double**, int);
 int calculate_k_from_eigengap (double*, int);
 void calc_eigen_values(double**, double*, int);
+void transpose_matrix(double **result_matrix, double **matrix, int n);
 
 #endif
