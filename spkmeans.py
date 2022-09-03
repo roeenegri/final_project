@@ -5,7 +5,6 @@ import mykmeanssp
 
 numpy.random.seed(0)
 
-
 def invalidInput():
     print("Invalid Input!")
     sys.exit()
@@ -25,6 +24,7 @@ def euclidean_norm_squared(vector1, vector2):
 # input validations
 
 n = len(sys.argv)  # num of cmd line arguments, helps us determine where our different inputs are located
+
 
 if (n < 3 or n > 4):  # invalid number of cmd line args
     invalidInput()
@@ -48,56 +48,41 @@ if(goal != "spk" and goal != "wam" and goal != "ddg" and goal != "lnorm" and goa
 # after receiving and validating cmd line args, preforming inner join using pandas:
 
 try:
-    f1_df = pd.read_csv(f1, sep=',', engine='python', header=None)
-    f1_df.columns = [("col " + str(i)) for i in
-                     range(len(f1_df.columns))]  # naming the columns, so we have direct access to them by name
-    f2_df = pd.read_csv(f2, sep=',', engine='python', header=None)
-    f2_df.columns = [("col " + str(i)) for i in
-                     range(len(f2_df.columns))]  # naming the columns, so we have direct access to them by name
+    
+    print ("inside try")
+    with open(file_name) as file:
+        list_of_all_vectors = [[float(num) for num in line.split(",")] for line in file]
+        vector_table = numpy.array(list_of_all_vectors)
 
-    # convert file_1 && file_2 to dataframe in pandas, make first column their index column and sort by index
-    vector_table = pd.merge(f1_df, f2_df, how='inner', on='col 0')  # merge by first column
-    lst = sorted(vector_table['col 0'].tolist())
-    vector_table = vector_table.set_index('col 0')  # setting the first column as index
-    vector_table = vector_table.sort_index()
+        print (vector_table)
+        print (type(vector_table))
+        print (list_of_all_vectors)
+        print (type(list_of_all_vectors))
+    
 
-    # implementation algorithm of kmeans_++
-
-    # converting dataframe to numpy 2D-array, in order to use seed and numpy.random.choice() for random choosing
-    vector_table = vector_table.to_numpy()
-    list_of_all_vectors = list(vector_table.tolist())  # creating a list of lists to send to c module
-
-    num_of_vectors = len(vector_table)  # counting the number of vectors provided
-
-    # creating a .txt file of vectors to send to c module for processing
-    f = open("vectors.txt", "w")
-
-    for i in range(0, num_of_vectors):
-        for j in range(0, len(list_of_all_vectors[i])):
-            temp_float = str(list_of_all_vectors[i][j])
-            if j == (len(list_of_all_vectors[i]) - 1):
-                f.write(temp_float)
-                f.write('\n')
-            else:
-                f.write(temp_float + ',')
-    f.close()
+    num_of_vectors = len(list_of_all_vectors)  # counting the number of vectors provided
+    print (num_of_vectors)
 
     # determining dimension of vectors
     if len(list_of_all_vectors) != 0:
         dimension = len(list_of_all_vectors[
                             0])  # dimension of first vector in the list (assuming input is valid, so all vectors
         # have the same dimension)
+        print ("dimension is: ")
+        print (dimension)
     else:  # there are no vectors in the list!
         errorOccurred()
 
     index_list = []  # index list: will be returned to the user at the end of the run
 
-    curr_miu_index = numpy.random.choice(lst)
-    curr_miu_index = int(curr_miu_index)
+    curr_miu_index = numpy.random.choice([ i for i in range (0, num_of_vectors)])
+    print ("curr miu")
+    print (curr_miu_index)
 
     index_list.append(curr_miu_index)
 
     miu_list = [vector_table[curr_miu_index]]  # miu_list now holds the first miu that has been chosen randomly
+    print (miu_list)
     curr_miu = miu_list[0]
     prob_list = [0 for i in range(0, num_of_vectors)]
     d_list = [numpy.inf for i in range(0, num_of_vectors)]  # for x_l, d_list[l] is D_l
@@ -105,6 +90,7 @@ try:
     # len(miu_list) = i, and it is 1 right now
 
     while len(miu_list) < k:
+        print (k)
         for i in range(0, num_of_vectors):  # for every vector in the list:
             curr_vector = vector_table[i]
 
@@ -127,8 +113,16 @@ try:
 
     # CALLING CLUSTERING METHOD FROM HW1
 
-    cent_list = mykmeanssp.fit("vectors.txt", index_list, k, num_of_vectors, dimension)
+    print (file_name)
+    print (index_list)
+    print(k)
+    print (num_of_vectors)
+    print(dimension)
+    print (goal)
 
+
+    cent_list = spkmeansmodule.fit(goal, file_name, index_list, k, num_of_vectors, dimension)
+    print ("hello")
     # retrieving original indices of chosen k vectors
 
     for i in range(0, len(index_list)):  # printing indices (with commas)
